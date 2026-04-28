@@ -1,0 +1,23 @@
+[project]
+name = "hollowatlas"
+version = "0.1.0"
+description = "A texture atlas packer with tileset-friendly grid workflows."
+requires-python = ">=3.9"
+dependencies = [
+  "Pillow>=9.0",
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest>=7.0",
+]
+gui = [
+  "tkinterdnd2>=0.4",
+]
+
+[project.scripts]
+hollowatlas = "hollowatlas.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
