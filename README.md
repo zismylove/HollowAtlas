@@ -10,6 +10,9 @@ The main implementation is a Rust packing core with a Tauri + React desktop GUI.
 
 - Atlas PNG export with shared `atlas.tpsheet` output for single-atlas and multi-atlas packs
 - Drag-and-drop desktop GUI with project save/load and recent-project history
+- Multi-folder input: pack folders together for space efficiency, or enable `Separate Input Folders` so each input root gets its own atlas page
+- `Force Max Atlas Size` keeps every output atlas page at the selected max size, useful when separately packed folders must share one texture size
+- Bilingual GUI with `Language` selector; Chinese is the default and English is available
 - Live atlas preview on a large pan/zoom canvas
 - Grid-aligned tileset mode for `48x48` and other fixed cell sizes
 - Optional grid slicing mode that keeps the source image as one shape for packing, but exports occupied grid cells as separate tile entries

@@ -5,21 +5,23 @@ use anyhow::Result;
 use image::{imageops, RgbaImage};
 use serde_json::json;
 
-use crate::core::manifest::build_godot_tpsheet;
-use crate::core::types::{AtlasBuild, AtlasResult, PackConfig, PackedSprite, Placement};
+use crate::core::manifest::{build_debug_manifest, build_godot_tpsheet};
+use crate::core::types::{
+    AtlasBuild, AtlasResult, OutputFormat, PackConfig, PackedSprite, Placement,
+};
 
 pub fn write_atlas(
     build: &AtlasBuild,
     output_dir: impl AsRef<Path>,
     atlas_name: &str,
-    tpsheet_name: &str,
+    manifest_name: &str,
     config: PackConfig,
 ) -> Result<AtlasResult> {
     let output_dir = output_dir.as_ref();
     fs::create_dir_all(output_dir)?;
 
     let png_path = output_dir.join(format!("{atlas_name}.png"));
-    let tpsheet_path = output_dir.join(tpsheet_name);
+    let manifest_path = output_dir.join(manifest_name);
     let debug_path = config
         .debug_json
         .then(|| output_dir.join(format!("{atlas_name}.debug.json")));
@@ -34,7 +36,7 @@ pub fn write_atlas(
             "atlas": {
                 "name": atlas_name,
                 "image": png_path.file_name().and_then(|name| name.to_str()).unwrap_or("atlas.png"),
-                "tpsheet": tpsheet_name,
+                "manifest": manifest_name,
                 "width": build.width,
                 "height": build.height,
                 "usage": build.usage,
@@ -47,7 +49,7 @@ pub fn write_atlas(
 
     Ok(AtlasResult {
         image_path: path_string(&png_path),
-        tpsheet_path: path_string(&tpsheet_path),
+        tpsheet_path: path_string(&manifest_path),
         debug_json_path: debug_path.as_ref().map(|path| path_string(path)),
         image_data_url: None,
         width: build.width,
@@ -57,18 +59,25 @@ pub fn write_atlas(
     })
 }
 
-pub fn write_tpsheet(
-    output_dir: impl AsRef<Path>,
-    tpsheet_name: &str,
+pub fn write_manifest(
+    manifest_path: impl AsRef<Path>,
     atlases: &[AtlasResult],
+    config: PackConfig,
 ) -> Result<PathBuf> {
-    let output_dir = output_dir.as_ref();
-    fs::create_dir_all(output_dir)?;
+    let manifest_path = manifest_path.as_ref();
+    if let Some(parent) = manifest_path
+        .parent()
+        .filter(|path| !path.as_os_str().is_empty())
+    {
+        fs::create_dir_all(parent)?;
+    }
 
-    let tpsheet_path = output_dir.join(tpsheet_name);
-    let manifest = build_godot_tpsheet(atlases);
-    fs::write(&tpsheet_path, serde_json::to_string_pretty(&manifest)?)?;
-    Ok(tpsheet_path)
+    let manifest = match config.output_format {
+        OutputFormat::GodotTpSheet => build_godot_tpsheet(atlases),
+        OutputFormat::JsonDebug => build_debug_manifest(atlases, config),
+    };
+    fs::write(manifest_path, serde_json::to_string_pretty(&manifest)?)?;
+    Ok(manifest_path.to_path_buf())
 }
 
 fn compose_atlas(build: &AtlasBuild, config: PackConfig) -> (RgbaImage, Vec<PackedSprite>) {

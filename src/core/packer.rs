@@ -1,15 +1,15 @@
 use std::collections::BTreeMap;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use anyhow::{bail, Context, Result};
 use image::{imageops, ImageReader, Rgba, RgbaImage};
 use rayon::prelude::*;
 
-use crate::core::atlas_writer::{write_atlas, write_tpsheet};
+use crate::core::atlas_writer::{write_atlas, write_manifest};
 use crate::core::extrude::extrude_image;
 use crate::core::maxrects::MaxRectsPacker;
-use crate::core::scanner::scan_folder;
+use crate::core::scanner::scan_folders;
 use crate::core::trim::trim_transparent;
 use crate::core::types::{
     AtlasBuild, AtlasResult, LogMessage, OutputFormat, PackConfig, PackResult, Placement,
@@ -21,17 +21,41 @@ pub fn pack_folder(
     output_path: impl AsRef<Path>,
     config: PackConfig,
 ) -> Result<PackResult> {
-    let plan = build_pack_plan(input_path, config)?;
-    let output_path = output_path.as_ref();
+    pack_folders(vec![input_path.as_ref().to_path_buf()], output_path, config)
+}
 
-    std::fs::create_dir_all(output_path)?;
+pub fn pack_folders<I, P>(
+    input_paths: I,
+    output_path: impl AsRef<Path>,
+    config: PackConfig,
+) -> Result<PackResult>
+where
+    I: IntoIterator<Item = P>,
+    P: AsRef<Path>,
+{
+    let input_paths = collect_input_paths(input_paths)?;
+    let plan = build_pack_plan(&input_paths, config)?;
+    let output_path = output_path.as_ref();
+    let output_target = resolve_output_target(output_path, plan.config)?;
+
+    std::fs::create_dir_all(&output_target.output_dir)?;
     let mut results: Vec<AtlasResult> = Vec::new();
     let mut logs = plan.logs;
-    let tpsheet_name = shared_tpsheet_name();
+    let total_atlases = plan.builds.len();
 
     for build in &plan.builds {
-        let atlas_name = format!("atlas_{}", build.atlas_index);
-        let result = write_atlas(build, output_path, &atlas_name, tpsheet_name, plan.config)?;
+        let atlas_name = atlas_output_name(
+            &output_target.atlas_base_name,
+            build.atlas_index,
+            total_atlases,
+        );
+        let result = write_atlas(
+            build,
+            &output_target.output_dir,
+            &atlas_name,
+            &output_target.manifest_name,
+            plan.config,
+        )?;
         logs.push(LogMessage::new(
             "success",
             format!(
@@ -46,8 +70,8 @@ pub fn pack_folder(
         results.push(result);
     }
 
-    remove_legacy_tpsheets(output_path, tpsheet_name)?;
-    let tpsheet_path = write_tpsheet(output_path, tpsheet_name, &results)?;
+    remove_legacy_tpsheets(&output_target.output_dir, &output_target.manifest_name)?;
+    let tpsheet_path = write_manifest(&output_target.manifest_path, &results, plan.config)?;
     let tpsheet_path_str = tpsheet_path.to_string_lossy().to_string();
     for result in &mut results {
         result.tpsheet_path = tpsheet_path_str.clone();
@@ -59,7 +83,7 @@ pub fn pack_folder(
             tpsheet_path
                 .file_name()
                 .and_then(|name| name.to_str())
-                .unwrap_or("atlas.tpsheet")
+                .unwrap_or(&output_target.manifest_name)
         ),
     ));
 
@@ -73,7 +97,16 @@ pub fn pack_folder(
 }
 
 pub fn preview_folder(input_path: impl AsRef<Path>, config: PackConfig) -> Result<PackResult> {
-    let plan = build_pack_plan(input_path, config)?;
+    preview_folders(vec![input_path.as_ref().to_path_buf()], config)
+}
+
+pub fn preview_folders<I, P>(input_paths: I, config: PackConfig) -> Result<PackResult>
+where
+    I: IntoIterator<Item = P>,
+    P: AsRef<Path>,
+{
+    let input_paths = collect_input_paths(input_paths)?;
+    let plan = build_pack_plan(&input_paths, config)?;
     let mut results: Vec<AtlasResult> = Vec::with_capacity(plan.builds.len());
     let preview_dir = preview_output_dir();
     let tpsheet_name = shared_tpsheet_name();
@@ -92,7 +125,7 @@ pub fn preview_folder(input_path: impl AsRef<Path>, config: PackConfig) -> Resul
     }
 
     remove_legacy_tpsheets(&preview_dir, tpsheet_name)?;
-    let tpsheet_path = write_tpsheet(&preview_dir, tpsheet_name, &results)?;
+    let tpsheet_path = write_manifest(preview_dir.join(tpsheet_name), &results, plan.config)?;
     let tpsheet_path_str = tpsheet_path.to_string_lossy().to_string();
     for result in &mut results {
         result.tpsheet_path = tpsheet_path_str.clone();
@@ -114,6 +147,59 @@ fn preview_output_dir() -> std::path::PathBuf {
 
 fn shared_tpsheet_name() -> &'static str {
     "atlas.tpsheet"
+}
+
+struct OutputTarget {
+    output_dir: PathBuf,
+    manifest_path: PathBuf,
+    manifest_name: String,
+    atlas_base_name: String,
+}
+
+fn resolve_output_target(output_path: &Path, config: PackConfig) -> Result<OutputTarget> {
+    let manifest_path = if output_path.extension().is_some() {
+        output_path.to_path_buf()
+    } else {
+        output_path.join(default_manifest_file_name(config.output_format))
+    };
+    let output_dir = manifest_path
+        .parent()
+        .filter(|path| !path.as_os_str().is_empty())
+        .map(Path::to_path_buf)
+        .unwrap_or_else(|| PathBuf::from("."));
+    let manifest_name = manifest_path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .context("Output file path must include a file name")?
+        .to_string();
+    let atlas_base_name = manifest_path
+        .file_stem()
+        .and_then(|name| name.to_str())
+        .filter(|name| !name.trim().is_empty())
+        .unwrap_or("atlas")
+        .to_string();
+
+    Ok(OutputTarget {
+        output_dir,
+        manifest_path,
+        manifest_name,
+        atlas_base_name,
+    })
+}
+
+fn default_manifest_file_name(output_format: OutputFormat) -> &'static str {
+    match output_format {
+        OutputFormat::GodotTpSheet => "atlas.tpsheet",
+        OutputFormat::JsonDebug => "atlas.json",
+    }
+}
+
+fn atlas_output_name(base_name: &str, atlas_index: usize, total_atlases: usize) -> String {
+    if total_atlases <= 1 {
+        base_name.to_string()
+    } else {
+        format!("{base_name}_{atlas_index}")
+    }
 }
 
 fn remove_legacy_tpsheets(output_dir: &Path, keep_name: &str) -> Result<()> {
@@ -143,9 +229,26 @@ struct PackPlan {
     total_sprites: usize,
 }
 
-fn build_pack_plan(input_path: impl AsRef<Path>, mut config: PackConfig) -> Result<PackPlan> {
+fn collect_input_paths<I, P>(input_paths: I) -> Result<Vec<PathBuf>>
+where
+    I: IntoIterator<Item = P>,
+    P: AsRef<Path>,
+{
+    let paths: Vec<PathBuf> = input_paths
+        .into_iter()
+        .map(|path| path.as_ref().to_path_buf())
+        .filter(|path| !path.as_os_str().is_empty())
+        .collect();
+
+    if paths.is_empty() {
+        bail!("Choose at least one input directory.");
+    }
+
+    Ok(paths)
+}
+
+fn build_pack_plan(input_paths: &[PathBuf], mut config: PackConfig) -> Result<PackPlan> {
     config = config.normalized();
-    let input_path = input_path.as_ref();
 
     let mut logs = Vec::new();
     if config.allow_rotation && config.output_format == OutputFormat::GodotTpSheet {
@@ -166,11 +269,25 @@ fn build_pack_plan(input_path: impl AsRef<Path>, mut config: PackConfig) -> Resu
         config.allow_rotation = false;
     }
 
-    logs.push(LogMessage::new(
-        "info",
-        format!("Scan folder: {}", input_path.display()),
-    ));
-    let scan = scan_folder(input_path)?;
+    if input_paths.len() == 1 {
+        logs.push(LogMessage::new(
+            "info",
+            format!("Scan folder: {}", input_paths[0].display()),
+        ));
+    } else {
+        logs.push(LogMessage::new(
+            "info",
+            format!("Scan folders: {} input directories.", input_paths.len()),
+        ));
+        for input_path in input_paths {
+            logs.push(LogMessage::new(
+                "info",
+                format!("Input folder: {}", input_path.display()),
+            ));
+        }
+    }
+
+    let scan = scan_folders(input_paths.iter())?;
     logs.extend(
         scan.warnings
             .iter()
@@ -220,7 +337,21 @@ fn build_pack_plan(input_path: impl AsRef<Path>, mut config: PackConfig) -> Resu
         ));
     }
 
-    let groups = split_groups(&prepared, config.split_mode);
+    let has_multiple_input_roots = input_paths.len() > 1 && scan.root.name == "Input Folders";
+    let separate_input_folders = config.separate_input_folders && has_multiple_input_roots;
+    if config.separate_input_folders && !has_multiple_input_roots {
+        logs.push(LogMessage::new(
+            "warning",
+            "Separate input folders is enabled, but only one input folder is loaded; packing as one group.",
+        ));
+    } else if separate_input_folders {
+        logs.push(LogMessage::new(
+            "info",
+            "Separate input folders enabled: each dropped input folder becomes its own atlas group.",
+        ));
+    }
+
+    let groups = split_groups(&prepared, config.split_mode, separate_input_folders);
     logs.push(LogMessage::new(
         "info",
         format!("Packing groups: {}", groups.len()),
@@ -596,11 +727,20 @@ fn build_grid_cell_label(label: &str, row: u32, column: u32) -> String {
 pub fn split_groups(
     sprites: &[PreparedSprite],
     split_mode: SplitMode,
+    separate_input_folders: bool,
 ) -> Vec<(String, Vec<PreparedSprite>)> {
+    if separate_input_folders {
+        return split_by_first_path_segment(sprites);
+    }
+
     if split_mode == SplitMode::AllInOne {
         return vec![("all".to_string(), sprites.to_vec())];
     }
 
+    split_by_first_path_segment(sprites)
+}
+
+fn split_by_first_path_segment(sprites: &[PreparedSprite]) -> Vec<(String, Vec<PreparedSprite>)> {
     let mut groups: BTreeMap<String, Vec<PreparedSprite>> = BTreeMap::new();
     for sprite in sprites {
         let group = sprite
@@ -972,6 +1112,11 @@ pub fn finalize_atlas_size(
 
     width = width.clamp(1, bin_width);
     height = height.clamp(1, bin_height);
+
+    if config.force_max_atlas_size {
+        width = config.max_size;
+        height = config.max_size;
+    }
 
     let content_area: u64 = placements
         .iter()

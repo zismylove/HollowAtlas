@@ -8,7 +8,7 @@ use hollowatlas::core::types::{OutputFormat, PackConfig, SplitMode};
 
 #[derive(Debug, Parser)]
 #[command(name = "hollowatlas")]
-#[command(about = "Texture atlas packer with tileset-friendly grid workflows")]
+#[command(about = "Texture atlas packer for Godot .tpsheet output")]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -44,6 +44,8 @@ enum Commands {
         no_power_of_two: bool,
         #[arg(long)]
         no_square: bool,
+        #[arg(long)]
+        force_max_atlas_size: bool,
         #[arg(long, default_value_t = SplitMode::AllInOne)]
         split_mode: SplitMode,
         #[arg(long, default_value_t = OutputFormat::GodotTpSheet)]
@@ -84,6 +86,7 @@ fn main() -> Result<()> {
             allow_rotation,
             no_power_of_two,
             no_square,
+            force_max_atlas_size,
             split_mode,
             output_format,
             debug_json,
@@ -100,6 +103,8 @@ fn main() -> Result<()> {
                 allow_rotation,
                 power_of_two: !no_power_of_two,
                 square: !no_square,
+                separate_input_folders: false,
+                force_max_atlas_size,
                 split_mode,
                 output_format,
                 debug_json: debug_json || output_format == OutputFormat::JsonDebug,

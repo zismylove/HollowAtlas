@@ -2,7 +2,7 @@ use std::path::Path;
 
 use serde_json::{json, Value};
 
-use crate::core::types::{AtlasResult, PackedSprite};
+use crate::core::types::{AtlasResult, PackConfig, PackedSprite};
 
 pub fn build_godot_tpsheet(atlases: &[AtlasResult]) -> Value {
     let texture_items: Vec<Value> = atlases.iter().map(build_texture_item).collect();
@@ -15,6 +15,17 @@ pub fn build_godot_tpsheet(atlases: &[AtlasResult]) -> Value {
             "target": "Godot TexturePacker Importer",
             "scale": "1"
         }
+    })
+}
+
+pub fn build_debug_manifest(atlases: &[AtlasResult], config: PackConfig) -> Value {
+    let total_sprites: usize = atlases.iter().map(|atlas| atlas.sprites.len()).sum();
+
+    json!({
+        "config": config,
+        "total_sprites": total_sprites,
+        "total_atlases": atlases.len(),
+        "atlases": atlases
     })
 }
 

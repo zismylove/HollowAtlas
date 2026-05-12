@@ -1,3 +1,4 @@
+use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -16,18 +17,119 @@ pub fn is_supported_image(path: &Path) -> bool {
 }
 
 pub fn scan_folder(path: impl AsRef<Path>) -> Result<ScanResult> {
-    let root_path = path.as_ref().canonicalize().with_context(|| {
-        format!(
-            "Input directory does not exist: {}",
-            path.as_ref().display()
-        )
-    })?;
+    let root_path = canonicalize_input_directory(path.as_ref())?;
+    let mut warnings = Vec::new();
+    let images = scan_root_images(&root_path, None, 0, &mut warnings)?;
+
+    let root = build_file_tree(&root_path, &images);
+    Ok(ScanResult {
+        total_images: images.len(),
+        root,
+        images,
+        warnings,
+    })
+}
+
+pub fn scan_folders<I, P>(paths: I) -> Result<ScanResult>
+where
+    I: IntoIterator<Item = P>,
+    P: AsRef<Path>,
+{
+    let root_paths = collect_unique_input_directories(paths)?;
+    if root_paths.len() == 1 {
+        return scan_folder(&root_paths[0]);
+    }
+
+    let labels = unique_root_labels(&root_paths);
+    let mut images = Vec::new();
+    let mut warnings = Vec::new();
+
+    for (root_path, label) in root_paths.iter().zip(labels.iter()) {
+        let mut root_images =
+            scan_root_images(root_path, Some(label), images.len(), &mut warnings)?;
+        images.append(&mut root_images);
+    }
+
+    let root = build_multi_file_tree(&images);
+    Ok(ScanResult {
+        total_images: images.len(),
+        root,
+        images,
+        warnings,
+    })
+}
+
+fn canonicalize_input_directory(path: &Path) -> Result<PathBuf> {
+    let root_path = path
+        .canonicalize()
+        .with_context(|| format!("Input directory does not exist: {}", path.display()))?;
 
     if !root_path.is_dir() {
         bail!("Input path is not a directory: {}", root_path.display());
     }
 
-    let mut files: Vec<PathBuf> = WalkDir::new(&root_path)
+    Ok(root_path)
+}
+
+fn collect_unique_input_directories<I, P>(paths: I) -> Result<Vec<PathBuf>>
+where
+    I: IntoIterator<Item = P>,
+    P: AsRef<Path>,
+{
+    let mut root_paths = Vec::new();
+    let mut seen = BTreeSet::new();
+
+    for path in paths {
+        if path.as_ref().as_os_str().is_empty() {
+            continue;
+        }
+
+        let root_path = canonicalize_input_directory(path.as_ref())?;
+        let key = path_to_posix(&root_path).to_ascii_lowercase();
+        if seen.insert(key) {
+            root_paths.push(root_path);
+        }
+    }
+
+    if root_paths.is_empty() {
+        bail!("Choose at least one input directory.");
+    }
+
+    Ok(root_paths)
+}
+
+fn unique_root_labels(root_paths: &[PathBuf]) -> Vec<String> {
+    let mut labels = Vec::with_capacity(root_paths.len());
+    let mut used = BTreeSet::new();
+
+    for root_path in root_paths {
+        let base_name = root_path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .filter(|name| !name.trim().is_empty())
+            .unwrap_or("input")
+            .to_string();
+        let mut label = base_name.clone();
+        let mut index = 2usize;
+
+        while !used.insert(label.to_ascii_lowercase()) {
+            label = format!("{base_name}_{index}");
+            index += 1;
+        }
+
+        labels.push(label);
+    }
+
+    labels
+}
+
+fn scan_root_images(
+    root_path: &Path,
+    rel_prefix: Option<&str>,
+    id_offset: usize,
+    warnings: &mut Vec<String>,
+) -> Result<Vec<SourceImage>> {
+    let mut files: Vec<PathBuf> = WalkDir::new(root_path)
         .into_iter()
         .filter_map(|entry| entry.ok())
         .filter(|entry| entry.file_type().is_file())
@@ -36,20 +138,22 @@ pub fn scan_folder(path: impl AsRef<Path>) -> Result<ScanResult> {
         .collect();
 
     files.sort_by_key(|path| {
-        path.strip_prefix(&root_path)
+        path.strip_prefix(root_path)
             .map(path_to_posix)
             .unwrap_or_else(|_| path_to_posix(path))
             .to_ascii_lowercase()
     });
 
     let mut images = Vec::with_capacity(files.len());
-    let mut warnings = Vec::new();
 
     for (id, file_path) in files.iter().enumerate() {
-        let rel_path = file_path
-            .strip_prefix(&root_path)
+        let local_rel_path = file_path
+            .strip_prefix(root_path)
             .map(path_to_posix)
             .unwrap_or_else(|_| path_to_posix(file_path));
+        let rel_path = rel_prefix
+            .map(|prefix| format!("{prefix}/{local_rel_path}"))
+            .unwrap_or(local_rel_path);
         let file_size = fs::metadata(file_path)?.len();
 
         let (width, height, readable, error) = match image::image_dimensions(file_path) {
@@ -61,7 +165,7 @@ pub fn scan_folder(path: impl AsRef<Path>) -> Result<ScanResult> {
         };
 
         images.push(SourceImage {
-            id,
+            id: id_offset + id,
             name: file_path
                 .file_name()
                 .and_then(|name| name.to_str())
@@ -77,13 +181,7 @@ pub fn scan_folder(path: impl AsRef<Path>) -> Result<ScanResult> {
         });
     }
 
-    let root = build_file_tree(&root_path, &images);
-    Ok(ScanResult {
-        total_images: images.len(),
-        root,
-        images,
-        warnings,
-    })
+    Ok(images)
 }
 
 pub fn build_file_tree(root_path: &Path, images: &[SourceImage]) -> FileTreeNode {
@@ -93,6 +191,18 @@ pub fn build_file_tree(root_path: &Path, images: &[SourceImage]) -> FileTreeNode
         .unwrap_or_else(|| root_path.to_str().unwrap_or("root"))
         .to_string();
     let mut root = FileTreeNode::directory(root_name, "");
+
+    for image in images {
+        let parts: Vec<&str> = image.rel_path.split('/').collect();
+        insert_image_node(&mut root, &parts, "");
+    }
+
+    update_counts_and_sort(&mut root);
+    root
+}
+
+fn build_multi_file_tree(images: &[SourceImage]) -> FileTreeNode {
+    let mut root = FileTreeNode::directory("Input Folders", "");
 
     for image in images {
         let parts: Vec<&str> = image.rel_path.split('/').collect();

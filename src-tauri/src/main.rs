@@ -7,12 +7,16 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
-use hollowatlas::core::packer::pack_folder as core_pack_folder;
-use hollowatlas::core::packer::preview_folder as core_preview_folder;
-use hollowatlas::core::scanner::scan_folder as core_scan_folder;
-use hollowatlas::core::types::{PackConfig, PackResult, ScanResult};
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
+use hollowatlas::core::packer::{
+    pack_folder as core_pack_folder, pack_folders as core_pack_folders,
+    preview_folder as core_preview_folder, preview_folders as core_preview_folders,
+};
+use hollowatlas::core::scanner::{
+    scan_folder as core_scan_folder, scan_folders as core_scan_folders,
+};
+use hollowatlas::core::types::{PackConfig, PackResult, ScanResult};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct ProjectFilePayload {
@@ -21,11 +25,15 @@ struct ProjectFilePayload {
     #[serde(default)]
     input_path: String,
     #[serde(default)]
+    input_paths: Vec<String>,
+    #[serde(default)]
     output_path: String,
     #[serde(default)]
     config: PackConfig,
     #[serde(default = "default_show_bounds")]
     show_bounds: bool,
+    #[serde(default = "default_language")]
+    language: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -55,6 +63,44 @@ fn default_project_version() -> u32 {
 
 fn default_show_bounds() -> bool {
     true
+}
+
+fn default_language() -> String {
+    "zh".to_string()
+}
+
+fn normalize_input_paths(input_path: &str, input_paths: &[String]) -> Vec<String> {
+    let normalized_key = |path: &str| {
+        path.trim_end_matches(|value| value == '/' || value == '\\')
+            .to_ascii_lowercase()
+    };
+    let mut paths: Vec<String> = Vec::new();
+    for path in input_paths.iter().map(String::as_str).chain([input_path]) {
+        let trimmed = path.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+
+        let key = normalized_key(trimmed);
+        if paths
+            .iter()
+            .any(|existing| normalized_key(existing.as_str()) == key)
+        {
+            continue;
+        }
+
+        paths.push(trimmed.to_string());
+    }
+
+    paths
+}
+
+fn normalize_project_payload(project: &mut ProjectFilePayload) {
+    project.input_paths = normalize_input_paths(&project.input_path, &project.input_paths);
+    project.input_path = project.input_paths.first().cloned().unwrap_or_default();
+    if project.language != "zh" && project.language != "en" {
+        project.language = default_language();
+    }
 }
 
 fn recent_projects_file_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
@@ -129,6 +175,11 @@ fn scan_folder(path: String) -> Result<ScanResult, String> {
 }
 
 #[tauri::command]
+fn scan_folders(paths: Vec<String>) -> Result<ScanResult, String> {
+    core_scan_folders(paths).map_err(|err| err.to_string())
+}
+
+#[tauri::command]
 fn pack_folder(
     input_path: String,
     output_path: String,
@@ -138,8 +189,22 @@ fn pack_folder(
 }
 
 #[tauri::command]
+fn pack_folders(
+    input_paths: Vec<String>,
+    output_path: String,
+    config: PackConfig,
+) -> Result<PackResult, String> {
+    core_pack_folders(input_paths, output_path, config).map_err(|err| err.to_string())
+}
+
+#[tauri::command]
 fn preview_folder(input_path: String, config: PackConfig) -> Result<PackResult, String> {
     core_preview_folder(input_path, config).map_err(|err| err.to_string())
+}
+
+#[tauri::command]
+fn preview_folders(input_paths: Vec<String>, config: PackConfig) -> Result<PackResult, String> {
+    core_preview_folders(input_paths, config).map_err(|err| err.to_string())
 }
 
 #[tauri::command]
@@ -156,6 +221,7 @@ fn save_project_file(path: String, mut project: ProjectFilePayload) -> Result<()
             .map_err(|err| format!("Failed to create project folder: {err}"))?;
     }
 
+    normalize_project_payload(&mut project);
     project.config = project.config.normalized();
     let content = serde_json::to_string_pretty(&project)
         .map_err(|err| format!("Failed to serialize project: {err}"))?;
@@ -169,6 +235,7 @@ fn load_project_file(path: String) -> Result<ProjectFilePayload, String> {
         fs::read_to_string(&path).map_err(|err| format!("Failed to read project file: {err}"))?;
     let mut project: ProjectFilePayload = serde_json::from_str(&content)
         .map_err(|err| format!("Failed to parse project file: {err}"))?;
+    normalize_project_payload(&mut project);
     project.config = project.config.normalized();
     Ok(project)
 }
@@ -212,12 +279,20 @@ fn clear_recent_projects(app: tauri::AppHandle) -> Result<(), String> {
 #[tauri::command]
 fn open_output_folder(path: String) -> Result<(), String> {
     let path = PathBuf::from(path);
-    fs::create_dir_all(&path).map_err(|err| format!("Failed to create output folder: {err}"))?;
+    let folder = if path.extension().is_some() {
+        path.parent()
+            .filter(|value| !value.as_os_str().is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| PathBuf::from("."))
+    } else {
+        path
+    };
+    fs::create_dir_all(&folder).map_err(|err| format!("Failed to create output folder: {err}"))?;
 
     #[cfg(target_os = "windows")]
     {
         Command::new("explorer")
-            .arg(&path)
+            .arg(&folder)
             .spawn()
             .map_err(|err| format!("Failed to open folder: {err}"))?;
     }
@@ -225,7 +300,7 @@ fn open_output_folder(path: String) -> Result<(), String> {
     #[cfg(target_os = "macos")]
     {
         Command::new("open")
-            .arg(&path)
+            .arg(&folder)
             .spawn()
             .map_err(|err| format!("Failed to open folder: {err}"))?;
     }
@@ -233,7 +308,7 @@ fn open_output_folder(path: String) -> Result<(), String> {
     #[cfg(all(unix, not(target_os = "macos")))]
     {
         Command::new("xdg-open")
-            .arg(&path)
+            .arg(&folder)
             .spawn()
             .map_err(|err| format!("Failed to open folder: {err}"))?;
     }
@@ -246,8 +321,11 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             scan_folder,
+            scan_folders,
             pack_folder,
+            pack_folders,
             preview_folder,
+            preview_folders,
             read_image_data_url,
             save_project_file,
             load_project_file,

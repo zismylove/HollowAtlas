@@ -12,6 +12,8 @@ export type PackConfig = {
   allow_rotation: boolean;
   power_of_two: boolean;
   square: boolean;
+  separate_input_folders: boolean;
+  force_max_atlas_size: boolean;
   split_mode: SplitMode;
   output_format: OutputFormat;
   debug_json: boolean;
@@ -92,9 +94,11 @@ export type PackResult = {
 export type ProjectFile = {
   version: number;
   input_path: string;
+  input_paths?: string[];
   output_path: string;
   config: PackConfig;
   show_bounds: boolean;
+  language?: "zh" | "en";
 };
 
 export type RecentProject = {

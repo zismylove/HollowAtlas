@@ -72,6 +72,10 @@ pub struct PackConfig {
     pub allow_rotation: bool,
     pub power_of_two: bool,
     pub square: bool,
+    #[serde(default)]
+    pub separate_input_folders: bool,
+    #[serde(default)]
+    pub force_max_atlas_size: bool,
     pub split_mode: SplitMode,
     pub output_format: OutputFormat,
     pub debug_json: bool,
@@ -90,6 +94,8 @@ impl Default for PackConfig {
             allow_rotation: false,
             power_of_two: true,
             square: true,
+            separate_input_folders: false,
+            force_max_atlas_size: false,
             split_mode: SplitMode::AllInOne,
             output_format: OutputFormat::GodotTpSheet,
             debug_json: false,
@@ -123,6 +129,8 @@ impl PackConfig {
             allow_rotation: self.allow_rotation,
             power_of_two: self.power_of_two,
             square: self.square,
+            separate_input_folders: self.separate_input_folders,
+            force_max_atlas_size: self.force_max_atlas_size,
             split_mode: self.split_mode,
             output_format: self.output_format,
             debug_json: self.debug_json,

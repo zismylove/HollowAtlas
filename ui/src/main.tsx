@@ -9,6 +9,7 @@ import {
   ChevronDown,
   ChevronRight,
   Eye,
+  FilePlus2,
   FolderOpen,
   Image as ImageIcon,
   Loader2,
@@ -38,6 +39,200 @@ const defaultGridCellSize = 48;
 const baseMaxSizeOptions = [512, 1024, 2048, 4096, 8192];
 const gridCellCountOptions = [4, 8, 16, 32, 64, 128];
 
+const translations = {
+  en: {
+    ready: "Ready.",
+    language: "Language",
+    chinese: "Chinese",
+    english: "English",
+    newProject: "New Project",
+    openProject: "Open Project",
+    recentProjects: "Recent Projects",
+    noRecentProjects: "No recent projects yet.",
+    clearRecent: "Clear Recent",
+    saveProject: "Save Project",
+    input: "Input",
+    pack: "Pack",
+    reveal: "Reveal",
+    project: "Project:",
+    output: "Output:",
+    noProjectFile: "No project file",
+    noInputFolders: "No input folders",
+    noOutputFile: "No output file",
+    missingFile: "Missing file",
+    files: "Files",
+    noFoldersSelected: "No folders selected",
+    releaseFolders: "Release folders to add them as input sources",
+    options: "Options",
+    outputFile: "Output File",
+    browse: "Browse",
+    selectOutputFile: "Select Output File",
+    selectOutputPlaceholder: "Select output file",
+    selectInputFirst: "Select input folders first to generate the default output file.",
+    leaveBlankPrefix: "Leave blank to use",
+    alignToGrid: "Align to Tile Grid",
+    gridCellSize: "Grid Cell Size",
+    gridCellSizeHelp: "Sprites snap to whole {size}x{size} cells. Tileset workflows usually work best with trim off and padding/extrude set to 0.",
+    sliceGridCells: "Slice Grid Cells",
+    sliceGridCellsOn: "Enabled: transparent grid holes split the image into occupied grid regions, while fully connected blocks stay merged.",
+    sliceGridCellsOff: "Disabled: keep each source image as one sprite, but only trim transparent area by whole grid cells around the outside.",
+    maxSize: "Max Size",
+    maxSizeGridHelp: "In grid mode, max size is normalized to a multiple of {size}. With Power of Two on, it uses power-of-two cell counts.",
+    padding: "Padding",
+    extrude: "Extrude",
+    trimTransparent: "Trim Transparent",
+    allowRotation: "Allow Rotation",
+    powerOfTwo: "Power of Two",
+    squareAtlas: "Square Atlas",
+    separateInputFolders: "Separate Input Folders",
+    separateInputFoldersHelp: "When multiple folders are loaded, each input folder is packed into its own atlas image instead of sharing one combined layout.",
+    forceMaxAtlasSize: "Force Max Atlas Size",
+    forceMaxAtlasSizeHelp: "Every output atlas page keeps the selected Max Size, even if only a few sprites are placed on that page.",
+    splitMode: "Split Mode",
+    outputFormat: "Output Format",
+    debugJson: "Debug JSON",
+    showBounds: "Show Bounds",
+    atlasWall: "Atlas Wall",
+    zoomOut: "Zoom out",
+    zoomIn: "Zoom in",
+    resetZoom: "Reset zoom",
+    generatingPreview: "Generating atlas preview...",
+    previewAfterProcessing: "Preview will appear here after the input folders are processed.",
+    dropFoldersOrInput: "Drop folders or choose Input.",
+    atlasCount: "atlas",
+    spritesCount: "sprites",
+    wheelZoom: "Wheel = zoom",
+    dragPan: "Drag = pan",
+    clear: "Clear",
+    newProjectTitle: "New blank project",
+    openProjectTitle: "Open project file",
+    recentProjectsTitle: "Recent projects",
+    saveProjectTitle: "Save project file",
+    projectFileType: "HollowAtlas Project",
+    saveProjectDialogTitle: "Save HollowAtlas Project",
+    chooseInputTitle: "Choose input folders",
+    packTitle: "Start packing",
+    revealTitle: "Open output folder",
+    clearTitle: "Clear current project",
+    scanFoldersLog: "Scan folders:",
+    imagesFoundLog: "Images found:",
+    projectLoadedLog: "Project loaded:",
+    projectNoInputsLog: "Project loaded, but no input folders are configured.",
+    chooseInputWarning: "Choose at least one input folder first.",
+    packStartedLog: "Pack started.",
+    chooseOutputWarning: "Choose an output file first.",
+    projectSavedLog: "Project saved:",
+    recentClearedLog: "Recent project list cleared.",
+    newBlankProjectLog: "New blank project ready.",
+    droppedPathsLog: "Dropped {count} path(s).",
+    previewFailedLog: "Preview failed:",
+    dragDropFailedLog: "Failed to enable drag and drop:",
+  },
+  zh: {
+    ready: "准备就绪。",
+    language: "Language",
+    chinese: "中文",
+    english: "English",
+    newProject: "新建项目",
+    openProject: "打开项目",
+    recentProjects: "最近项目",
+    noRecentProjects: "还没有最近项目。",
+    clearRecent: "清空最近",
+    saveProject: "保存项目",
+    input: "输入目录",
+    pack: "打包",
+    reveal: "打开输出",
+    project: "项目：",
+    output: "输出：",
+    noProjectFile: "未选择项目文件",
+    noInputFolders: "未选择输入目录",
+    noOutputFile: "未设置输出文件",
+    missingFile: "文件不存在",
+    files: "文件",
+    noFoldersSelected: "未选择目录",
+    releaseFolders: "松开鼠标，将目录加入输入列表",
+    options: "选项",
+    outputFile: "输出文件",
+    browse: "浏览",
+    selectOutputFile: "选择输出文件",
+    selectOutputPlaceholder: "选择输出文件",
+    selectInputFirst: "请先选择输入目录，程序会生成默认输出文件。",
+    leaveBlankPrefix: "留空则使用",
+    alignToGrid: "对齐 Tile 网格",
+    gridCellSize: "网格尺寸",
+    gridCellSizeHelp: "精灵会对齐到完整 {size}x{size} 格子。Tileset 流程通常建议关闭裁剪，并将 padding/extrude 设为 0。",
+    sliceGridCells: "切分网格格子",
+    sliceGridCellsOn: "开启：透明网格空洞会参与形状打包，连续的实心块仍保持合并。",
+    sliceGridCellsOff: "关闭：每张源图保持为一个精灵，只按外围完整透明格裁剪。",
+    maxSize: "最大尺寸",
+    maxSizeGridHelp: "网格模式下，最大尺寸会规范为 {size} 的倍数；开启 2 的幂时会使用 2 的幂格子数。",
+    padding: "间距",
+    extrude: "边缘扩展",
+    trimTransparent: "裁剪透明边",
+    allowRotation: "允许旋转",
+    powerOfTwo: "2 的幂尺寸",
+    squareAtlas: "正方形图集",
+    separateInputFolders: "输入目录分别打包",
+    separateInputFoldersHelp: "加载多个目录时，每个输入目录会单独打包成自己的 atlas 图页，而不是共享一个合并布局。",
+    forceMaxAtlasSize: "强制最大图集尺寸",
+    forceMaxAtlasSizeHelp: "每张输出 atlas 都保持当前最大尺寸；即使只有少量图片，也会输出同样大小的空白图页。",
+    splitMode: "拆分模式",
+    outputFormat: "输出格式",
+    debugJson: "调试 JSON",
+    showBounds: "显示边框",
+    atlasWall: "图集预览",
+    zoomOut: "缩小",
+    zoomIn: "放大",
+    resetZoom: "重置缩放",
+    generatingPreview: "正在生成图集预览...",
+    previewAfterProcessing: "输入目录处理完成后会在这里显示预览。",
+    dropFoldersOrInput: "拖入目录，或点击输入目录。",
+    atlasCount: "张图集",
+    spritesCount: "个精灵",
+    wheelZoom: "滚轮 = 缩放",
+    dragPan: "拖拽 = 平移",
+    clear: "清空",
+    newProjectTitle: "新建空白项目",
+    openProjectTitle: "打开项目文件",
+    recentProjectsTitle: "最近项目",
+    saveProjectTitle: "保存项目文件",
+    projectFileType: "HollowAtlas 项目",
+    saveProjectDialogTitle: "保存 HollowAtlas 项目",
+    chooseInputTitle: "选择输入目录",
+    packTitle: "开始打包",
+    revealTitle: "打开输出文件所在目录",
+    clearTitle: "清空当前项目",
+    scanFoldersLog: "扫描目录：",
+    imagesFoundLog: "发现图片：",
+    projectLoadedLog: "项目已打开：",
+    projectNoInputsLog: "项目已打开，但没有配置输入目录。",
+    chooseInputWarning: "请先选择至少一个输入目录。",
+    packStartedLog: "开始打包。",
+    chooseOutputWarning: "请先选择输出文件。",
+    projectSavedLog: "项目已保存：",
+    recentClearedLog: "最近项目列表已清空。",
+    newBlankProjectLog: "新的空白项目已准备好。",
+    droppedPathsLog: "已拖入 {count} 个路径。",
+    previewFailedLog: "预览失败：",
+    dragDropFailedLog: "启用拖拽失败：",
+  },
+} as const;
+
+type Language = keyof typeof translations;
+type TranslationKey = keyof typeof translations.en;
+
+function translate(language: Language, key: TranslationKey) {
+  return translations[language][key] ?? translations.en[key];
+}
+
+function makeTranslator(language: Language) {
+  return (key: TranslationKey) => translate(language, key);
+}
+
+function normalizeLanguage(value: string | null | undefined): Language {
+  return value === "en" ? "en" : "zh";
+}
+
 const defaultConfig: PackConfig = {
   max_size: 2048,
   padding: 2,
@@ -49,17 +244,52 @@ const defaultConfig: PackConfig = {
   allow_rotation: false,
   power_of_two: true,
   square: true,
+  separate_input_folders: false,
+  force_max_atlas_size: false,
   split_mode: "all_in_one",
   output_format: "godot_tpsheet",
   debug_json: false,
 };
 
-function defaultLogs(): LogMessage[] {
-  return [{ level: "info", message: "Ready." }];
+function defaultLogs(language: Language = "zh"): LogMessage[] {
+  return [{ level: "info", message: translate(language, "ready") }];
 }
 
 function trimTrailingSeparators(path: string) {
   return path.replace(/[\\/]+$/, "");
+}
+
+function normalizeInputPaths(paths: string | string[] | null | undefined) {
+  const rawPaths = Array.isArray(paths) ? paths : paths ? [paths] : [];
+  const normalized: string[] = [];
+  const seen = new Set<string>();
+
+  rawPaths.forEach((path) => {
+    const trimmed = path.trim();
+    if (!trimmed) return;
+
+    const key = trimTrailingSeparators(trimmed).toLocaleLowerCase();
+    if (seen.has(key)) return;
+
+    seen.add(key);
+    normalized.push(trimmed);
+  });
+
+  return normalized;
+}
+
+function mergeInputPaths(current: string[], incoming: string[]) {
+  return normalizeInputPaths([...current, ...incoming]);
+}
+
+function primaryInputPath(paths: string | string[] | null | undefined) {
+  return normalizeInputPaths(paths)[0] ?? "";
+}
+
+function formatInputPaths(paths: string[], language: Language = "zh") {
+  if (paths.length === 0) return "";
+  if (paths.length === 1) return paths[0];
+  return language === "zh" ? `${paths.length} 个目录：${paths.join("; ")}` : `${paths.length} folders: ${paths.join("; ")}`;
 }
 
 function joinPath(base: string, leaf: string) {
@@ -67,12 +297,31 @@ function joinPath(base: string, leaf: string) {
   return `${trimTrailingSeparators(base)}/${leaf}`;
 }
 
-function buildDefaultOutputPath(inputPath: string) {
-  return inputPath ? joinPath(inputPath, "atlas_out") : "";
+function outputExtensionForFormat(format: PackConfig["output_format"]) {
+  return format === "json_debug" ? "json" : "tpsheet";
 }
 
-function buildDefaultProjectPath(inputPath: string) {
-  const cleaned = trimTrailingSeparators(inputPath);
+function outputFilterName(format: PackConfig["output_format"], language: Language) {
+  if (format === "json_debug") return language === "zh" ? "JSON 输出" : "JSON Output";
+  return language === "zh" ? "Godot TexturePacker 表" : "Godot TexturePacker Sheet";
+}
+
+function buildDefaultOutputPath(inputPaths: string | string[], config: PackConfig = defaultConfig) {
+  const inputPath = primaryInputPath(inputPaths);
+  return inputPath ? joinPath(inputPath, `atlas.${outputExtensionForFormat(config.output_format)}`) : "";
+}
+
+function ensureOutputExtension(path: string, format: PackConfig["output_format"]) {
+  if (!path) return path;
+  const extension = outputExtensionForFormat(format);
+  if (/\.(tpsheet|json)$/i.test(path)) {
+    return path.replace(/\.(tpsheet|json)$/i, `.${extension}`);
+  }
+  return `${path}.${extension}`;
+}
+
+function buildDefaultProjectPath(inputPaths: string | string[]) {
+  const cleaned = trimTrailingSeparators(primaryInputPath(inputPaths));
   if (!cleaned) return `hollowatlas.${projectExtension}`;
   const parts = cleaned.split(/[\\/]/).filter(Boolean);
   const folderName = parts.length > 0 ? parts[parts.length - 1] : "hollowatlas";
@@ -125,8 +374,8 @@ function buildMaxSizeOptions(config: PackConfig) {
   return options.sort((left, right) => left - right);
 }
 
-function formatRecentTime(timestamp: number) {
-  return new Intl.DateTimeFormat(undefined, {
+function formatRecentTime(timestamp: number, language: Language = "zh") {
+  return new Intl.DateTimeFormat(language === "zh" ? "zh-CN" : undefined, {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -245,7 +494,9 @@ function drawGridOverlay(
 }
 
 function App() {
-  const [inputPath, setInputPath] = useState("");
+  const [language, setLanguage] = useState<Language>("zh");
+  const t = useMemo(() => makeTranslator(language), [language]);
+  const [inputPaths, setInputPaths] = useState<string[]>([]);
   const [outputPath, setOutputPath] = useState("");
   const [projectPath, setProjectPath] = useState("");
   const [recentProjects, setRecentProjects] = useState<RecentProject[]>([]);
@@ -253,12 +504,13 @@ function App() {
   const [scan, setScan] = useState<ScanResult | null>(null);
   const [result, setResult] = useState<PackResult | null>(null);
   const [config, setConfig] = useState<PackConfig>(normalizePackConfig(defaultConfig));
-  const [logs, setLogs] = useState<LogMessage[]>(defaultLogs);
+  const [logs, setLogs] = useState<LogMessage[]>(() => defaultLogs(language));
   const [busy, setBusy] = useState(false);
   const [showBounds, setShowBounds] = useState(true);
   const [dragActive, setDragActive] = useState(false);
   const previewRequestRef = useRef(0);
   const recentMenuRef = useRef<HTMLDivElement | null>(null);
+  const inputPath = inputPaths[0] ?? "";
 
   const pushLog = useCallback((level: LogMessage["level"], message: string) => {
     setLogs((current) => [...current, { level, message }]);
@@ -276,103 +528,119 @@ function App() {
     return projects;
   }, []);
 
-  const scanFolder = useCallback(async (path: string) => {
-    if (!path) return;
+  const scanFolders = useCallback(async (paths: string[]) => {
+    const nextPaths = normalizeInputPaths(paths);
+    if (nextPaths.length === 0) return;
     setBusy(true);
     setScan(null);
     setResult(null);
     try {
-      pushLog("info", `Scan folder: ${path}`);
-      const nextScan = await invoke<ScanResult>("scan_folder", { path });
+      pushLog("info", `${t("scanFoldersLog")} ${formatInputPaths(nextPaths, language)}`);
+      const nextScan = await invoke<ScanResult>("scan_folders", { paths: nextPaths });
       setScan(nextScan);
-      pushLog("success", `Images found: ${nextScan.total_images}`);
+      pushLog("success", `${t("imagesFoundLog")} ${nextScan.total_images}`);
       nextScan.warnings.forEach((warning) => pushLog("warning", warning));
     } catch (error) {
       pushLog("error", String(error));
     } finally {
       setBusy(false);
     }
-  }, [pushLog]);
+  }, [language, pushLog, t]);
 
-  const generatePreview = useCallback(async (path: string, nextConfig: PackConfig) => {
-    if (!path) return;
+  const generatePreview = useCallback(async (paths: string[], nextConfig: PackConfig) => {
+    const nextPaths = normalizeInputPaths(paths);
+    if (nextPaths.length === 0) return;
     const requestId = ++previewRequestRef.current;
     setBusy(true);
     try {
-      const nextResult = await invoke<PackResult>("preview_folder", {
-        inputPath: path,
+      const nextResult = await invoke<PackResult>("preview_folders", {
+        inputPaths: nextPaths,
         config: nextConfig,
       });
       if (previewRequestRef.current !== requestId) return;
       setResult(nextResult);
     } catch (error) {
       if (previewRequestRef.current !== requestId) return;
-      pushLog("error", `Preview failed: ${String(error)}`);
+      pushLog("error", `${t("previewFailedLog")} ${String(error)}`);
     } finally {
       if (previewRequestRef.current === requestId) {
         setBusy(false);
       }
     }
-  }, [pushLog]);
+  }, [pushLog, t]);
 
-  const loadInputFolder = useCallback(async (path: string) => {
-    const currentDefault = buildDefaultOutputPath(inputPath);
+  const loadInputFolders = useCallback(async (paths: string[], options: { append?: boolean } = {}) => {
+    const incomingPaths = normalizeInputPaths(paths);
+    if (incomingPaths.length === 0) return;
+
+    const nextInputPaths = options.append ? mergeInputPaths(inputPaths, incomingPaths) : incomingPaths;
+    const currentDefault = buildDefaultOutputPath(inputPaths, config);
     const nextOutputPath = !outputPath || outputPath === currentDefault
-      ? buildDefaultOutputPath(path)
+      ? buildDefaultOutputPath(nextInputPaths, config)
       : outputPath;
 
-    setInputPath(path);
+    setInputPaths(nextInputPaths);
     setOutputPath(nextOutputPath);
-    await scanFolder(path);
-  }, [inputPath, outputPath, scanFolder]);
+    await scanFolders(nextInputPaths);
+  }, [config, inputPaths, outputPath, scanFolders]);
 
   const loadProjectFromPath = useCallback(async (path: string) => {
     const project = await invoke<ProjectFile>("load_project_file", { path });
     const nextConfig = normalizePackConfig({ ...defaultConfig, ...project.config });
-    const nextOutputPath = project.output_path || buildDefaultOutputPath(project.input_path);
+    const nextInputPaths = normalizeInputPaths(
+      project.input_paths && project.input_paths.length > 0 ? project.input_paths : project.input_path,
+    );
+    const nextOutputPath = project.output_path || buildDefaultOutputPath(nextInputPaths, nextConfig);
 
     setProjectPath(path);
-    setInputPath(project.input_path);
+    setInputPaths(nextInputPaths);
     setOutputPath(nextOutputPath);
     setConfig(nextConfig);
+    setLanguage(normalizeLanguage(project.language));
     setShowBounds(project.show_bounds ?? true);
     setResult(null);
 
-    if (project.input_path) {
-      await scanFolder(project.input_path);
+    if (nextInputPaths.length > 0) {
+      await scanFolders(nextInputPaths);
       await rememberRecentProject(path);
-      pushLog("success", `Project loaded: ${path}`);
+      pushLog("success", `${t("projectLoadedLog")} ${path}`);
     } else {
       setScan(null);
       await rememberRecentProject(path);
-      pushLog("warning", "Project loaded, but no input folder is configured.");
+      pushLog("warning", t("projectNoInputsLog"));
     }
-  }, [pushLog, rememberRecentProject, scanFolder]);
+  }, [pushLog, rememberRecentProject, scanFolders, t]);
 
   async function chooseInput() {
-    const selected = await open({ directory: true, multiple: false });
-    if (typeof selected !== "string") return;
-    await loadInputFolder(selected);
+    const selected = await open({ directory: true, multiple: true });
+    const selectedPaths = normalizeInputPaths(selected);
+    if (selectedPaths.length === 0) return;
+    await loadInputFolders(selectedPaths);
   }
 
   async function chooseOutput() {
-    const selected = await open({ directory: true, multiple: false });
-    if (typeof selected === "string") setOutputPath(selected);
+    const extension = outputExtensionForFormat(config.output_format);
+    const selected = await saveDialog({
+      title: t("selectOutputFile"),
+      defaultPath: outputPath || buildDefaultOutputPath(inputPaths, config),
+      filters: [{ name: outputFilterName(config.output_format, language), extensions: [extension] }],
+    });
+    if (typeof selected === "string") setOutputPath(ensureOutputExtension(selected, config.output_format));
   }
 
   async function pack() {
-    if (!inputPath) {
-      pushLog("warning", "Choose an input folder first.");
+    if (inputPaths.length === 0) {
+      pushLog("warning", t("chooseInputWarning"));
       return;
     }
     previewRequestRef.current += 1;
-    const finalOutput = outputPath || buildDefaultOutputPath(inputPath);
+    const finalOutput = ensureOutputExtension(outputPath || buildDefaultOutputPath(inputPaths, config), config.output_format);
     setOutputPath(finalOutput);
     setBusy(true);
     try {
-      pushLog("info", "Pack started.");
-      const nextResult = await invoke<PackResult>("pack_folder", {
-        inputPath,
+      pushLog("info", t("packStartedLog"));
+      const nextResult = await invoke<PackResult>("pack_folders", {
+        inputPaths,
         outputPath: finalOutput,
         config,
       });
@@ -386,9 +654,9 @@ function App() {
   }
 
   async function openOutputFolder() {
-    const finalOutput = outputPath || buildDefaultOutputPath(inputPath);
+    const finalOutput = ensureOutputExtension(outputPath || buildDefaultOutputPath(inputPaths, config), config.output_format);
     if (!finalOutput) {
-      pushLog("warning", "Choose an output folder first.");
+      pushLog("warning", t("chooseOutputWarning"));
       return;
     }
     setOutputPath(finalOutput);
@@ -402,7 +670,7 @@ function App() {
   async function openProject() {
     const selected = await open({
       multiple: false,
-      filters: [{ name: "HollowAtlas Project", extensions: [projectExtension, "json"] }],
+      filters: [{ name: t("projectFileType"), extensions: [projectExtension, "json"] }],
     });
     if (typeof selected !== "string") return;
 
@@ -431,9 +699,9 @@ function App() {
   async function saveProject() {
     try {
       const selected = projectPath || await saveDialog({
-        title: "Save HollowAtlas Project",
-        defaultPath: projectPath || buildDefaultProjectPath(inputPath),
-        filters: [{ name: "HollowAtlas Project", extensions: [projectExtension] }],
+        title: t("saveProjectDialogTitle"),
+        defaultPath: projectPath || buildDefaultProjectPath(inputPaths),
+        filters: [{ name: t("projectFileType"), extensions: [projectExtension] }],
       });
       if (!selected) return;
 
@@ -441,16 +709,18 @@ function App() {
       const project: ProjectFile = {
         version: 1,
         input_path: inputPath,
+        input_paths: inputPaths,
         output_path: outputPath,
         config,
         show_bounds: showBounds,
+        language,
       };
 
       await invoke("save_project_file", { path: finalPath, project });
       setProjectPath(finalPath);
       await rememberRecentProject(finalPath);
       setRecentMenuOpen(false);
-      pushLog("success", `Project saved: ${finalPath}`);
+      pushLog("success", `${t("projectSavedLog")} ${finalPath}`);
     } catch (error) {
       pushLog("error", String(error));
     }
@@ -461,7 +731,7 @@ function App() {
       await invoke("clear_recent_projects");
       setRecentProjects([]);
       setRecentMenuOpen(false);
-      pushLog("success", "Recent project list cleared.");
+      pushLog("success", t("recentClearedLog"));
     } catch (error) {
       pushLog("error", String(error));
     }
@@ -469,15 +739,21 @@ function App() {
 
   function clear() {
     previewRequestRef.current += 1;
-    setInputPath("");
+    setInputPaths([]);
     setOutputPath("");
     setProjectPath("");
     setScan(null);
     setResult(null);
     setConfig(normalizePackConfig({ ...defaultConfig }));
     setShowBounds(true);
-    setLogs(defaultLogs());
+    setLogs(defaultLogs(language));
     setDragActive(false);
+  }
+
+  function newProject() {
+    clear();
+    setRecentMenuOpen(false);
+    pushLog("success", t("newBlankProjectLog"));
   }
 
   useEffect(() => {
@@ -514,11 +790,11 @@ function App() {
         }
 
         setDragActive(false);
-        const droppedPath = event.payload.paths[0];
-        if (!droppedPath) return;
+        const droppedPaths = normalizeInputPaths(event.payload.paths);
+        if (droppedPaths.length === 0) return;
 
-        pushLog("info", `Dropped path: ${droppedPath}`);
-        loadInputFolder(droppedPath).catch((error) => pushLog("error", String(error)));
+        pushLog("info", t("droppedPathsLog").replace("{count}", String(droppedPaths.length)));
+        loadInputFolders(droppedPaths, { append: true }).catch((error: unknown) => pushLog("error", String(error)));
       })
       .then((dispose) => {
         if (cancelled) {
@@ -527,20 +803,20 @@ function App() {
           unlisten = dispose;
         }
       })
-      .catch((error) => pushLog("error", `Failed to enable drag and drop: ${String(error)}`));
+      .catch((error) => pushLog("error", `${t("dragDropFailedLog")} ${String(error)}`));
 
     return () => {
       cancelled = true;
       unlisten?.();
     };
-  }, [loadInputFolder, pushLog]);
+  }, [loadInputFolders, pushLog, t]);
 
   useEffect(() => {
-    if (!scan || !inputPath) return;
+    if (!scan || inputPaths.length === 0) return;
 
     const timer = window.setTimeout(() => {
-      generatePreview(inputPath, config).catch((error) => {
-        pushLog("error", `Preview failed: ${String(error)}`);
+      generatePreview(inputPaths, config).catch((error) => {
+        pushLog("error", `${t("previewFailedLog")} ${String(error)}`);
       });
     }, 120);
 
@@ -548,26 +824,37 @@ function App() {
       window.clearTimeout(timer);
       previewRequestRef.current += 1;
     };
-  }, [scan, inputPath, config, generatePreview, pushLog]);
+  }, [scan, inputPaths, config, generatePreview, pushLog, t]);
 
   return (
     <main className="app">
       <header className="toolbar">
+        <label className="language-picker">
+          <span>{t("language")}</span>
+          <select value={language} onChange={(event) => setLanguage(normalizeLanguage(event.target.value))}>
+            <option value="zh">{t("chinese")}</option>
+            <option value="en">{t("english")}</option>
+          </select>
+        </label>
+        <button className="new-project" onClick={newProject} title={t("newProjectTitle")}>
+          <FilePlus2 size={18} />
+          <span>{t("newProject")}</span>
+        </button>
         <div className="split-button" ref={recentMenuRef}>
-          <button onClick={openProject} title="打开项目文件">
+          <button onClick={openProject} title={t("openProjectTitle")}>
             <FolderOpen size={18} />
-            <span>Open Project</span>
+            <span>{t("openProject")}</span>
           </button>
           <button
             className="split-toggle"
             onClick={() => setRecentMenuOpen((value) => !value)}
-            title="最近项目"
+            title={t("recentProjectsTitle")}
           >
             <ChevronDown size={16} />
           </button>
           {recentMenuOpen && (
             <div className="recent-menu">
-              <div className="recent-menu-header">Recent Projects</div>
+              <div className="recent-menu-header">{t("recentProjects")}</div>
               {recentProjects.length > 0 ? (
                 <div className="recent-menu-list">
                   {recentProjects.map((project) => (
@@ -580,48 +867,48 @@ function App() {
                       <strong>{project.name}</strong>
                       <span>{project.path}</span>
                       <small>
-                        {project.exists ? formatRecentTime(project.last_opened_at) : "Missing file"}
+                        {project.exists ? formatRecentTime(project.last_opened_at, language) : t("missingFile")}
                       </small>
                     </button>
                   ))}
                 </div>
               ) : (
-                <div className="recent-menu-empty">No recent projects yet.</div>
+                <div className="recent-menu-empty">{t("noRecentProjects")}</div>
               )}
               <button className="recent-menu-clear" onClick={clearRecentProjectList}>
-                Clear Recent
+                {t("clearRecent")}
               </button>
             </div>
           )}
         </div>
-        <button onClick={saveProject} title="保存项目文件">
+        <button onClick={saveProject} title={t("saveProjectTitle")}>
           <Save size={18} />
-          <span>Save Project</span>
+          <span>{t("saveProject")}</span>
         </button>
-        <button onClick={chooseInput} title="选择输入目录">
+        <button onClick={chooseInput} title={t("chooseInputTitle")}>
           <FolderOpen size={18} />
-          <span>Input</span>
+          <span>{t("input")}</span>
         </button>
-        <button className="primary" onClick={pack} disabled={busy} title="开始打包">
+        <button className="primary" onClick={pack} disabled={busy} title={t("packTitle")}>
           {busy ? <Loader2 className="spin" size={18} /> : <Play size={18} />}
-          <span>Pack</span>
+          <span>{t("pack")}</span>
         </button>
-        <button onClick={openOutputFolder} title="打开输出目录">
+        <button onClick={openOutputFolder} title={t("revealTitle")}>
           <Boxes size={18} />
-          <span>Open</span>
+          <span>{t("reveal")}</span>
         </button>
-        <button onClick={clear} title="清空当前项目">
+        <button onClick={clear} title={t("clearTitle")}>
           <Trash2 size={18} />
         </button>
         <div className="pathline">
-          <span><strong>Project:</strong>{projectPath || "No project file"}</span>
-          <span><strong>Input:</strong>{inputPath || "No input folder"}</span>
-          <span><strong>Output:</strong>{outputPath || buildDefaultOutputPath(inputPath) || "No output folder"}</span>
+          <span><strong>{t("project")}</strong>{projectPath || t("noProjectFile")}</span>
+          <span title={inputPaths.join("\n")}><strong>{t("input")}:</strong>{formatInputPaths(inputPaths, language) || t("noInputFolders")}</span>
+          <span><strong>{t("output")}</strong>{outputPath || buildDefaultOutputPath(inputPaths, config) || t("noOutputFile")}</span>
         </div>
       </header>
 
       <section className="workspace">
-        <FileTree scan={scan} />
+        <FileTree scan={scan} t={t} />
         <AtlasPreview
           atlases={result?.atlases ?? []}
           busy={busy}
@@ -632,22 +919,26 @@ function App() {
           recentProjects={recentProjects}
           openRecentProject={openRecentProject}
           clearRecentProjects={clearRecentProjectList}
+          language={language}
+          t={t}
         />
         <OptionsPanel
           config={config}
           setConfig={setConfig}
-          inputPath={inputPath}
+          inputPaths={inputPaths}
           outputPath={outputPath}
           setOutputPath={setOutputPath}
           chooseOutput={chooseOutput}
           showBounds={showBounds}
           setShowBounds={setShowBounds}
+          language={language}
+          t={t}
         />
         {dragActive && (
           <div className="drop-overlay">
             <div className="drop-overlay-content">
               <FolderOpen size={36} />
-              <span>Release a folder to load it as the input source</span>
+              <span>{t("releaseFolders")}</span>
             </div>
           </div>
         )}
@@ -658,15 +949,15 @@ function App() {
   );
 }
 
-function FileTree({ scan }: { scan: ScanResult | null }) {
+function FileTree({ scan, t }: { scan: ScanResult | null; t: (key: TranslationKey) => string }) {
   return (
     <aside className="panel tree-panel">
       <div className="panel-title">
         <FolderOpen size={17} />
-        <span>Files</span>
+        <span>{t("files")}</span>
       </div>
       <div className="tree-scroll">
-        {scan ? <TreeNode node={scan.root} root /> : <div className="empty">No folder selected</div>}
+        {scan ? <TreeNode node={scan.root} root /> : <div className="empty">{t("noFoldersSelected")}</div>}
       </div>
     </aside>
   );
@@ -703,56 +994,71 @@ function TreeNode({ node, root = false }: { node: FileTreeNode; root?: boolean }
 function OptionsPanel({
   config,
   setConfig,
-  inputPath,
+  inputPaths,
   outputPath,
   setOutputPath,
   chooseOutput,
   showBounds,
   setShowBounds,
+  language,
+  t,
 }: {
   config: PackConfig;
   setConfig: React.Dispatch<React.SetStateAction<PackConfig>>;
-  inputPath: string;
+  inputPaths: string[];
   outputPath: string;
-  setOutputPath: (value: string) => void;
+  setOutputPath: React.Dispatch<React.SetStateAction<string>>;
   chooseOutput: () => Promise<void>;
   showBounds: boolean;
   setShowBounds: (value: boolean) => void;
+  language: Language;
+  t: (key: TranslationKey) => string;
 }) {
   function update<K extends keyof PackConfig>(key: K, value: PackConfig[K]) {
+    if (key === "output_format") {
+      const nextFormat = value as PackConfig["output_format"];
+      const currentDefault = buildDefaultOutputPath(inputPaths, config);
+      setOutputPath((current) => {
+        if (!current) return current;
+        if (current === currentDefault || /\.(tpsheet|json)$/i.test(current)) {
+          return ensureOutputExtension(current, nextFormat);
+        }
+        return current;
+      });
+    }
     setConfig((current) => normalizePackConfig({ ...current, [key]: value }));
   }
 
-  const defaultOutputPath = buildDefaultOutputPath(inputPath);
+  const defaultOutputPath = buildDefaultOutputPath(inputPaths, config);
   const maxSizeOptions = buildMaxSizeOptions(config);
 
   return (
     <aside className="panel options-panel">
       <div className="panel-title">
         <Settings2 size={17} />
-        <span>Options</span>
+        <span>{t("options")}</span>
       </div>
       <label className="path-field">
-        <span>Output Folder</span>
+        <span>{t("outputFile")}</span>
         <div className="path-field-row">
           <input
             value={outputPath}
             onChange={(event) => setOutputPath(event.target.value)}
-            placeholder={defaultOutputPath || "Select output folder"}
+            placeholder={defaultOutputPath || t("selectOutputPlaceholder")}
           />
-          <button type="button" onClick={chooseOutput}>Browse</button>
+          <button type="button" onClick={chooseOutput}>{t("browse")}</button>
         </div>
         <small>
           {defaultOutputPath
-            ? `Leave blank to use ${defaultOutputPath}`
-            : "Select an input folder first to generate the default output path."}
+            ? `${t("leaveBlankPrefix")} ${defaultOutputPath}`
+            : t("selectInputFirst")}
         </small>
       </label>
-      <Toggle label="Align to Tile Grid" value={config.align_to_grid} setValue={(value) => update("align_to_grid", value)} />
+      <Toggle label={t("alignToGrid")} value={config.align_to_grid} setValue={(value) => update("align_to_grid", value)} />
       {config.align_to_grid && (
         <>
           <label>
-            <span>Grid Cell Size</span>
+            <span>{t("gridCellSize")}</span>
             <select value={config.grid_cell_size} onChange={(event) => update("grid_cell_size", Number(event.target.value))}>
               {[16, 24, 32, 48, 64, 96, 128].map((value) => (
                 <option key={value} value={value}>
@@ -761,21 +1067,21 @@ function OptionsPanel({
               ))}
             </select>
             <small>
-              Sprites snap to whole {config.grid_cell_size}x{config.grid_cell_size} cells. Tileset workflows usually work best with trim off and padding/extrude set to 0.
+              {t("gridCellSizeHelp").replace(/\{size\}/g, String(config.grid_cell_size))}
             </small>
           </label>
-          <Toggle label="Slice Grid Cells" value={config.slice_grid_cells} setValue={(value) => update("slice_grid_cells", value)} />
+          <Toggle label={t("sliceGridCells")} value={config.slice_grid_cells} setValue={(value) => update("slice_grid_cells", value)} />
           <label>
             <small>
               {config.slice_grid_cells
-                ? "Enabled: transparent grid holes split the image into occupied grid regions, while fully connected blocks stay merged."
-                : "Disabled: keep each source image as one sprite, but only trim transparent area by whole grid cells around the outside."}
+                ? t("sliceGridCellsOn")
+                : t("sliceGridCellsOff")}
             </small>
           </label>
         </>
       )}
       <label>
-        <span>Max Size</span>
+        <span>{t("maxSize")}</span>
         <select value={config.max_size} onChange={(event) => update("max_size", Number(event.target.value))}>
           {maxSizeOptions.map((value) => (
             <option key={value} value={value}>
@@ -785,12 +1091,12 @@ function OptionsPanel({
         </select>
         {config.align_to_grid && (
           <small>
-            In grid mode, max size is normalized to a multiple of {config.grid_cell_size}. With Power of Two on, it uses power-of-two cell counts.
+            {t("maxSizeGridHelp").replace("{size}", String(config.grid_cell_size))}
           </small>
         )}
       </label>
       <label>
-        <span>Padding</span>
+        <span>{t("padding")}</span>
         <select value={config.padding} onChange={(event) => update("padding", Number(event.target.value))}>
           {[0, 1, 2, 4, 8].map((value) => (
             <option key={value} value={value}>
@@ -800,7 +1106,7 @@ function OptionsPanel({
         </select>
       </label>
       <label>
-        <span>Extrude</span>
+        <span>{t("extrude")}</span>
         <select value={config.extrude} onChange={(event) => update("extrude", Number(event.target.value))}>
           {[0, 1, 2, 4].map((value) => (
             <option key={value} value={value}>
@@ -809,26 +1115,38 @@ function OptionsPanel({
           ))}
         </select>
       </label>
-      <Toggle label="Trim Transparent" value={config.trim} setValue={(value) => update("trim", value)} />
-      <Toggle label="Allow Rotation" value={config.allow_rotation} setValue={(value) => update("allow_rotation", value)} />
-      <Toggle label="Power of Two" value={config.power_of_two} setValue={(value) => update("power_of_two", value)} />
-      <Toggle label="Square Atlas" value={config.square} setValue={(value) => update("square", value)} />
+      <Toggle label={t("trimTransparent")} value={config.trim} setValue={(value) => update("trim", value)} />
+      <Toggle label={t("allowRotation")} value={config.allow_rotation} setValue={(value) => update("allow_rotation", value)} />
+      <Toggle label={t("powerOfTwo")} value={config.power_of_two} setValue={(value) => update("power_of_two", value)} />
+      <Toggle label={t("squareAtlas")} value={config.square} setValue={(value) => update("square", value)} />
+      <Toggle label={t("separateInputFolders")} value={config.separate_input_folders} setValue={(value) => update("separate_input_folders", value)} />
       <label>
-        <span>Split Mode</span>
+        <small>
+          {t("separateInputFoldersHelp")}
+        </small>
+      </label>
+      <Toggle label={t("forceMaxAtlasSize")} value={config.force_max_atlas_size} setValue={(value) => update("force_max_atlas_size", value)} />
+      <label>
+        <small>
+          {t("forceMaxAtlasSizeHelp")}
+        </small>
+      </label>
+      <label>
+        <span>{t("splitMode")}</span>
         <select value={config.split_mode} onChange={(event) => update("split_mode", event.target.value as PackConfig["split_mode"])}>
-          <option value="all_in_one">all_in_one</option>
-          <option value="by_first_level_folder">by_first_level_folder</option>
+          <option value="all_in_one">{language === "zh" ? "合并打包" : "all_in_one"}</option>
+          <option value="by_first_level_folder">{language === "zh" ? "按一级目录" : "by_first_level_folder"}</option>
         </select>
       </label>
       <label>
-        <span>Output Format</span>
+        <span>{t("outputFormat")}</span>
         <select value={config.output_format} onChange={(event) => update("output_format", event.target.value as PackConfig["output_format"])}>
           <option value="godot_tpsheet">godot_tpsheet</option>
           <option value="json_debug">json_debug</option>
         </select>
       </label>
-      <Toggle label="Debug JSON" value={config.debug_json} setValue={(value) => update("debug_json", value)} />
-      <Toggle label="Show Bounds" value={showBounds} setValue={setShowBounds} />
+      <Toggle label={t("debugJson")} value={config.debug_json} setValue={(value) => update("debug_json", value)} />
+      <Toggle label={t("showBounds")} value={showBounds} setValue={setShowBounds} />
     </aside>
   );
 }
@@ -852,6 +1170,8 @@ function AtlasPreview({
   recentProjects,
   openRecentProject,
   clearRecentProjects,
+  language,
+  t,
 }: {
   atlases: AtlasResult[];
   busy: boolean;
@@ -862,6 +1182,8 @@ function AtlasPreview({
   recentProjects: RecentProject[];
   openRecentProject: (path: string) => Promise<void>;
   clearRecentProjects: () => Promise<void>;
+  language: Language;
+  t: (key: TranslationKey) => string;
 }) {
   const [loadedImages, setLoadedImages] = useState<Map<string, HTMLImageElement>>(new Map());
   const [loadError, setLoadError] = useState("");
@@ -1017,7 +1339,7 @@ function AtlasPreview({
       context.fillStyle = "#5e6c7d";
       context.font = '12px "Segoe UI", sans-serif';
       context.fillText(
-        `${item.atlas.width}x${item.atlas.height}  ${item.atlas.sprites.length} sprites  ${(item.atlas.usage * 100).toFixed(1)}%`,
+        `${item.atlas.width}x${item.atlas.height}  ${item.atlas.sprites.length} ${t("spritesCount")}  ${(item.atlas.usage * 100).toFixed(1)}%`,
         item.x + 92,
         item.y + 4,
       );
@@ -1057,16 +1379,16 @@ function AtlasPreview({
     });
 
     context.restore();
-  }, [alignToGrid, atlases, canvasSize.height, canvasSize.width, gridCellSize, layout.items, loadedImages, offset.x, offset.y, showBounds, zoom]);
+  }, [alignToGrid, atlases, canvasSize.height, canvasSize.width, gridCellSize, layout.items, loadedImages, offset.x, offset.y, showBounds, t, zoom]);
 
   const totalSprites = useMemo(() => atlases.reduce((sum, atlas) => sum + atlas.sprites.length, 0), [atlases]);
   const showRecentProjects = !busy && !loadingPreview && !hasScan && recentProjects.length > 0;
 
   const emptyMessage = loadError || (busy || loadingPreview
-    ? "Generating atlas preview..."
+    ? t("generatingPreview")
     : hasScan
-      ? "Preview will appear here after the folder is processed."
-      : "Drop a folder or choose Input.");
+      ? t("previewAfterProcessing")
+      : t("dropFoldersOrInput"));
   const showOverlay = atlases.length === 0 || (loadedImages.size === 0 && (loadingPreview || Boolean(loadError)));
 
   function applyZoom(factor: number, anchor?: { x: number; y: number }) {
@@ -1117,19 +1439,19 @@ function AtlasPreview({
       <div className="preview-toolbar">
         <div className="panel-title">
           <Eye size={17} />
-          <span>Atlas Wall</span>
+          <span>{t("atlasWall")}</span>
         </div>
         <div className="preview-actions">
           <span className="zoom-label">{Math.round(zoom * 100)}%</span>
-          <button onClick={() => applyZoom(0.85)} title="缩小">
+          <button onClick={() => applyZoom(0.85)} title={t("zoomOut")}>
             <ZoomOut size={17} />
           </button>
-          <button onClick={() => applyZoom(1.15)} title="放大">
+          <button onClick={() => applyZoom(1.15)} title={t("zoomIn")}>
             <ZoomIn size={17} />
           </button>
           <button
             onClick={fitView}
-            title="重置缩放"
+            title={t("resetZoom")}
           >
             <RotateCcw size={17} />
           </button>
@@ -1181,8 +1503,8 @@ function AtlasPreview({
             {showRecentProjects && (
               <div className="recent-panel">
                 <div className="recent-panel-header">
-                  <strong>Recent Projects</strong>
-                  <button type="button" className="recent-panel-clear" onClick={clearRecentProjects}>Clear</button>
+                  <strong>{t("recentProjects")}</strong>
+                  <button type="button" className="recent-panel-clear" onClick={clearRecentProjects}>{t("clear")}</button>
                 </div>
                 <div className="recent-panel-list">
                   {recentProjects.map((project) => (
@@ -1195,7 +1517,7 @@ function AtlasPreview({
                     >
                       <strong>{project.name}</strong>
                       <span>{project.path}</span>
-                      <small>{project.exists ? formatRecentTime(project.last_opened_at) : "Missing file"}</small>
+                      <small>{project.exists ? formatRecentTime(project.last_opened_at, language) : t("missingFile")}</small>
                     </button>
                   ))}
                 </div>
@@ -1205,11 +1527,11 @@ function AtlasPreview({
         )}
       </div>
       <div className="status-strip">
-        <span>{atlases.length} atlas</span>
-        <span>{totalSprites} sprites</span>
+        <span>{atlases.length} {t("atlasCount")}</span>
+        <span>{totalSprites} {t("spritesCount")}</span>
         {alignToGrid && <span>{`Grid ${gridCellSize}x${gridCellSize}`}</span>}
-        <span>Wheel = zoom</span>
-        <span>Drag = pan</span>
+        <span>{t("wheelZoom")}</span>
+        <span>{t("dragPan")}</span>
       </div>
     </section>
   );

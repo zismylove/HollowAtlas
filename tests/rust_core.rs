@@ -1,12 +1,13 @@
 use std::fs;
 use std::path::Path;
 
+use image::{Rgba, RgbaImage};
 use hollowatlas::core::extrude::extrude_image;
 use hollowatlas::core::maxrects::MaxRectsPacker;
-use hollowatlas::core::packer::{pack_folder, preview_folder};
+use hollowatlas::core::packer::{pack_folder, pack_folders, preview_folder};
+use hollowatlas::core::scanner::scan_folders;
 use hollowatlas::core::trim::trim_transparent;
 use hollowatlas::core::types::{OutputFormat, PackConfig, SplitMode};
-use image::{Rgba, RgbaImage};
 
 #[test]
 fn trim_transparent_tracks_source_offsets() {
@@ -75,6 +76,7 @@ fn pack_folder_writes_png_and_tpsheet() {
     let base = Path::new("build/rust_tests/pack_folder");
     let input_dir = base.join("input");
     let output_dir = base.join("output");
+    let output_file = output_dir.join("sprites.tpsheet");
     fs::create_dir_all(input_dir.join("characters")).unwrap();
     fs::create_dir_all(&output_dir).unwrap();
 
@@ -91,7 +93,7 @@ fn pack_folder_writes_png_and_tpsheet() {
 
     let result = pack_folder(
         &input_dir,
-        &output_dir,
+        &output_file,
         PackConfig {
             max_size: 128,
             padding: 2,
@@ -110,7 +112,7 @@ fn pack_folder_writes_png_and_tpsheet() {
     assert!(Path::new(&atlas.tpsheet_path).exists());
     assert_eq!(
         Path::new(&atlas.tpsheet_path).file_name().unwrap(),
-        "atlas.tpsheet"
+        "sprites.tpsheet"
     );
     assert!(atlas
         .debug_json_path
@@ -124,7 +126,7 @@ fn pack_folder_writes_png_and_tpsheet() {
     let textures = manifest["textures"].as_array().unwrap();
     assert_eq!(textures.len(), 1);
     let texture = &textures[0];
-    assert_eq!(texture["image"], "atlas_0.png");
+    assert_eq!(texture["image"], "sprites.png");
     assert_eq!(texture["format"], "RGBA8888");
     let sprites = texture["sprites"].as_array().unwrap();
     let hero_frame = sprites
@@ -145,10 +147,164 @@ fn pack_folder_writes_png_and_tpsheet() {
 }
 
 #[test]
+fn multiple_input_folders_scan_and_pack_together() {
+    let base = Path::new("build/rust_tests/multiple_input_folders");
+    let characters_dir = base.join("characters");
+    let ui_dir = base.join("ui");
+    let output_dir = base.join("output");
+    let output_file = output_dir.join("combined.tpsheet");
+    let _ = fs::remove_dir_all(base);
+    fs::create_dir_all(&characters_dir).unwrap();
+    fs::create_dir_all(&ui_dir).unwrap();
+    fs::create_dir_all(&output_dir).unwrap();
+
+    RgbaImage::from_pixel(16, 16, Rgba([255, 0, 0, 255]))
+        .save(characters_dir.join("hero.png"))
+        .unwrap();
+    RgbaImage::from_pixel(8, 8, Rgba([0, 120, 255, 255]))
+        .save(ui_dir.join("button.png"))
+        .unwrap();
+
+    let scan = scan_folders([&characters_dir, &ui_dir]).unwrap();
+    assert_eq!(scan.total_images, 2);
+    assert!(scan
+        .images
+        .iter()
+        .any(|image| image.rel_path == "characters/hero.png"));
+    assert!(scan
+        .images
+        .iter()
+        .any(|image| image.rel_path == "ui/button.png"));
+
+    let result = pack_folders(
+        [&characters_dir, &ui_dir],
+        &output_file,
+        PackConfig {
+            max_size: 128,
+            padding: 0,
+            extrude: 0,
+            trim: false,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+
+    assert_eq!(result.total_sprites, 2);
+    let sprite_paths: Vec<_> = result.atlases[0]
+        .sprites
+        .iter()
+        .map(|sprite| sprite.rel_path.as_str())
+        .collect();
+    assert!(sprite_paths.contains(&"characters/hero.png"));
+    assert!(sprite_paths.contains(&"ui/button.png"));
+}
+
+#[test]
+fn separate_input_folders_create_independent_atlases() {
+    let base = Path::new("build/rust_tests/separate_input_folders");
+    let characters_dir = base.join("characters");
+    let ui_dir = base.join("ui");
+    let output_dir = base.join("output");
+    let output_file = output_dir.join("separate.tpsheet");
+    let _ = fs::remove_dir_all(base);
+    fs::create_dir_all(&characters_dir).unwrap();
+    fs::create_dir_all(&ui_dir).unwrap();
+    fs::create_dir_all(&output_dir).unwrap();
+
+    RgbaImage::from_pixel(16, 16, Rgba([255, 0, 0, 255]))
+        .save(characters_dir.join("hero.png"))
+        .unwrap();
+    RgbaImage::from_pixel(8, 8, Rgba([0, 120, 255, 255]))
+        .save(ui_dir.join("button.png"))
+        .unwrap();
+
+    let result = pack_folders(
+        [&characters_dir, &ui_dir],
+        &output_file,
+        PackConfig {
+            max_size: 128,
+            padding: 0,
+            extrude: 0,
+            trim: false,
+            separate_input_folders: true,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+
+    assert_eq!(result.total_sprites, 2);
+    assert_eq!(result.total_atlases, 2);
+    assert_eq!(result.atlases[0].sprites.len(), 1);
+    assert_eq!(result.atlases[1].sprites.len(), 1);
+    assert!(result.atlases[0].sprites[0]
+        .rel_path
+        .starts_with("characters/"));
+    assert!(result.atlases[1].sprites[0].rel_path.starts_with("ui/"));
+    assert_eq!(
+        Path::new(&result.atlases[0].image_path)
+            .file_name()
+            .unwrap(),
+        "separate_0.png"
+    );
+    assert_eq!(
+        Path::new(&result.atlases[1].image_path)
+            .file_name()
+            .unwrap(),
+        "separate_1.png"
+    );
+
+    let manifest: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&result.atlases[0].tpsheet_path).unwrap())
+            .unwrap();
+    assert_eq!(manifest["textures"].as_array().unwrap().len(), 2);
+}
+
+#[test]
+fn force_max_atlas_size_keeps_all_pages_same_size() {
+    let base = Path::new("build/rust_tests/force_max_atlas_size");
+    let characters_dir = base.join("characters");
+    let ui_dir = base.join("ui");
+    let output_dir = base.join("output");
+    let _ = fs::remove_dir_all(base);
+    fs::create_dir_all(&characters_dir).unwrap();
+    fs::create_dir_all(&ui_dir).unwrap();
+    fs::create_dir_all(&output_dir).unwrap();
+
+    RgbaImage::from_pixel(16, 16, Rgba([255, 0, 0, 255]))
+        .save(characters_dir.join("hero.png"))
+        .unwrap();
+    RgbaImage::from_pixel(8, 8, Rgba([0, 120, 255, 255]))
+        .save(ui_dir.join("button.png"))
+        .unwrap();
+
+    let result = pack_folders(
+        [&characters_dir, &ui_dir],
+        output_dir.join("fixed.tpsheet"),
+        PackConfig {
+            max_size: 128,
+            padding: 0,
+            extrude: 0,
+            trim: false,
+            separate_input_folders: true,
+            force_max_atlas_size: true,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+
+    assert_eq!(result.total_atlases, 2);
+    assert!(result
+        .atlases
+        .iter()
+        .all(|atlas| atlas.width == 128 && atlas.height == 128));
+}
+
+#[test]
 fn pack_folder_splits_multiple_atlases_when_needed() {
     let base = Path::new("build/rust_tests/multi_atlas");
     let input_dir = base.join("input");
     let output_dir = base.join("output");
+    let output_file = output_dir.join("multi.tpsheet");
     fs::create_dir_all(&input_dir).unwrap();
     fs::create_dir_all(&output_dir).unwrap();
 
@@ -160,7 +316,7 @@ fn pack_folder_splits_multiple_atlases_when_needed() {
 
     let result = pack_folder(
         &input_dir,
-        &output_dir,
+        &output_file,
         PackConfig {
             max_size: 64,
             padding: 0,
@@ -176,6 +332,18 @@ fn pack_folder_splits_multiple_atlases_when_needed() {
     assert_eq!(
         result.atlases[0].tpsheet_path,
         result.atlases[1].tpsheet_path
+    );
+    assert_eq!(
+        Path::new(&result.atlases[0].image_path)
+            .file_name()
+            .unwrap(),
+        "multi_0.png"
+    );
+    assert_eq!(
+        Path::new(&result.atlases[1].image_path)
+            .file_name()
+            .unwrap(),
+        "multi_1.png"
     );
     let manifest: serde_json::Value =
         serde_json::from_str(&fs::read_to_string(&result.atlases[0].tpsheet_path).unwrap())
